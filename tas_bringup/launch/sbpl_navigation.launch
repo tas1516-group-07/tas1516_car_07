@@ -7,7 +7,7 @@
     <param name="controller_frequency" value="10.0" />
     <param name="controller_patience" value="100.0" />
     <param name="base_global_planner" value="SBPLLatticePlanner" />
-    <param name="SBPLLatticePlanner/primitive_filename" value="/home/philipp/ros_workspace/src/sbpl/matlab/mprim/tas_car.mprim" />
+    <param name="SBPLLatticePlanner/primitive_filename" value="$(find tas_bringup)param/tas_car.mprim" />
     <rosparam file="$(find tas_bringup)/param/costmap_common_params.yaml" command="load" ns="global_costmap" />
     <rosparam file="$(find tas_bringup)/param/costmap_common_params.yaml" command="load" ns="local_costmap" />
     <rosparam file="$(find tas_bringup)/param/local_costmap_params_close.yaml" command="load" />
