@@ -43,7 +43,7 @@ int main(int argc, char** argv){
 
   ros::NodeHandle n;
   odom_pub = n.advertise<nav_msgs::Odometry>("odom", 50);
-  ros::Subscriber link_state_sub = n.subscribe("/ackermann_vehicle/gazebo/link_states", 1000, linkStateCallBack);
+  ros::Subscriber link_state_sub = n.subscribe("/gazebo/link_states", 1000, linkStateCallBack);
   
   odom_broadcaster = new tf::TransformBroadcaster();
 

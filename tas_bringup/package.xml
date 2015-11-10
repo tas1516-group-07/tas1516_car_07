@@ -40,10 +40,8 @@
   <!-- Use test_depend for packages you need only for testing: -->
   <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>tas_navigation</build_depend>
   <build_depend>tas_odometry</build_depend>
   <build_depend>tas_simulator</build_depend>
-  <run_depend>tas_navigation</run_depend>
   <run_depend>tas_odometry</run_depend>
   <run_depend>tas_simulator</run_depend>
 

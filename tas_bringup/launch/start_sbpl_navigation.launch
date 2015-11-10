@@ -1,4 +1,0 @@
-<launch>
-	<include file="$(find tas_simulator)/launch/start_simulation.launch"/>
-	<node pkg="tas_odometry" type="perfect_odometry" name="perfect_odometry"/>
-	

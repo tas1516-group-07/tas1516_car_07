@@ -470,7 +470,7 @@ limitations under the License.
         </noise>
       </ray>
       <plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_laser.so">
-        <topicName>/scan</topicName>
+        <topicName>scan_front</topicName>
         <frameName>/hokuyo_front_link</frameName>
       </plugin>
     </sensor>
@@ -533,7 +533,7 @@ limitations under the License.
         </noise>
       </ray>
       <plugin name="gazebo_ros_back_hokuyo_controller" filename="libgazebo_ros_laser.so">
-        <topicName>/scan_back</topicName>
+        <topicName>scan_back</topicName>
         <frameName>/hokuyo_back_link</frameName>
       </plugin>
     </sensor>

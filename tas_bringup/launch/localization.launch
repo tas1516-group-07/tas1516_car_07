@@ -1,0 +1,11 @@
+<launch>
+	<arg name="map_file" default="$(find tas_simulator)/resources/map_3rd_floor_025.yaml"/>
+
+	<!-- Run the map server -->
+	<node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
+
+	<node pkg="tas_odometry" type="perfect_odometry" name="perfect_odometry"/>
+	<node pkg="amcl" type="amcl" name="amcl">
+		<remap from="/scan" to="/scan_front" />
+	</node>
+</launch>

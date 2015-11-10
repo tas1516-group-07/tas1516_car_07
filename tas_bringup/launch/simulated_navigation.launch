@@ -1,0 +1,6 @@
+<launch>
+	<include file="$(find tas_simulator)/launch/start_simulation.launch"/>
+	<include file="$(find tas_bringup)/launch/rviz.launch"/>
+	<include file="$(find tas_bringup)/launch/localization.launch"/>
+	<include file="$(find tas_bringup)/launch/sbpl_navigation.launch"/>
+</launch>
