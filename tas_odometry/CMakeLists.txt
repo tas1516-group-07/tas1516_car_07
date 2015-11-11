@@ -129,6 +129,7 @@ include_directories(
 ## Declare a C++ executable
 add_executable(perfect_odometry src/perfect_odometry.cpp)
 
+add_executable(wheel_odometry src/wheel_odometry.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(tas_odometry_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -138,6 +139,9 @@ target_link_libraries(perfect_odometry
   ${catkin_LIBRARIES}
 )
 
+target_link_libraries(wheel_odometry
+  ${catkin_LIBRARIES}
+)
 #############
 ## Install ##
 #############
