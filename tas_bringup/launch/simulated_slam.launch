@@ -1,0 +1,7 @@
+<launch>
+	<include file="$(find tas_simulator)/launch/start_simulation.launch"/>
+	<include file="$(find tas_bringup)/launch/rviz.launch"/>
+	<include file="$(find tas_bringup)/launch/slam.launch"/>
+	<include file="$(find tas_bringup)/launch/sbpl_navigation.launch"/>
+	<include file="$(find cmd_vel_ackermann_bridge)/launch/cmd_vel_ackermann_bridge.launch"/> 
+</launch>

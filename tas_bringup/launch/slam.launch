@@ -1,0 +1,11 @@
+<launch>
+	<node pkg="tas_odometry" type="perfect_odometry" name="perfect_odometry"/>
+	<node pkg="gmapping" type="slam_gmapping" name="slam_gmapping">
+		<param name="delta" value="0.025" />
+		<param name="xmin" value="20" />
+		<param name="ymin" value="20" />
+		<param name="xmax" value="20" />
+		<param name="ymax" value="20" />
+		<remap from="/scan" to="/scan_front" />
+	</node>
+</launch>
