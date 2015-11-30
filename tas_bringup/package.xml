@@ -45,6 +45,7 @@
   <run_depend>tas_odometry</run_depend>
   <run_depend>tas_simulator</run_depend>
   <run_depend>slam_gmappping</run_depend>
+  <run_depend>frontier_exploration</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
