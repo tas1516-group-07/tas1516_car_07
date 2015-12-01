@@ -4,4 +4,5 @@
 	<include file="$(find tas_bringup)/launch/slam.launch"/>
 	<include file="$(find tas_bringup)/launch/sbpl_navigation.launch"/>
 	<include file="$(find cmd_vel_ackermann_bridge)/launch/cmd_vel_ackermann_bridge.launch"/> 
+	<include file="$(find tas_bringup)/launch/exploration_frontier.launch"/>
 </launch>

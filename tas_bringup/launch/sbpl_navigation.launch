@@ -13,6 +13,6 @@
     <rosparam file="$(find tas_bringup)/param/local_costmap_params.yaml" command="load" ns="local_costmap"/>
     <rosparam file="$(find tas_bringup)/param/global_costmap_params.yaml" command="load"  ns="global_costmap"/>
     <rosparam file="$(find tas_bringup)/param/sbpl_global_params.yaml" command="load" />
-    <rosparam file="$(find tas_bringup)/param/base_local_planner_params.yaml" command="load" />
+    <rosparam file="$(find tas_bringup)/param/dwa_planner_params.yaml" command="load" />
   </node>
 </launch>
