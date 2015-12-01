@@ -6,6 +6,7 @@ project(tas_odometry)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   gazebo_msgs
+  sensor_msgs
   nav_msgs
   roscpp
   tf
@@ -128,14 +129,19 @@ include_directories(
 
 ## Declare a C++ executable
 add_executable(perfect_odometry src/perfect_odometry.cpp)
-
+add_executable(imu_odometry src/imu_odometry.cpp)
 add_executable(wheel_odometry src/wheel_odometry.cpp)
+
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(tas_odometry_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(perfect_odometry
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(imu_odometry
   ${catkin_LIBRARIES}
 )
 
