@@ -9,89 +9,102 @@
 
 ros::Publisher odom_pub;
 tf::TransformBroadcaster* odom_broadcaster;
-nav_msgs::Odometry lastOdom; //Speichern der letzten Odometry
+//nav_msgs::Odometry lastOdom; //Speichern der letzten Odometry
 
+//Speichern letzte Odometrie
+double dblPosX = 0.0;
+double dblPosY = 0.0;
 
-void saveOdometry (nav_msgs::Odometry* odomPntr, ros::Time stamp, double x, double y, geometry_msgs::Quaternion orientation){
-	odomPntr->header.stamp = stamp;
-	odomPntr->pose.pose.position.x=x;
-	odomPntr->pose.pose.position.y=y;
-	odomPntr->pose.pose.orientation=orientation;
-}
+double dblAngZ = 0.0;
+
+double dblLinVeloX = 0.0;
+double dblLinVeloY = 0.0;
+
+ros::Time timeLastTime = ros::Time::now();
 
 void imuCallBack(const sensor_msgs::Imu::ConstPtr& imu) //Erhaelt Msg vom Typ sensor_msgs/Imu von Topic /imu
 {
+	/* imuCallBack
+	 * --------------
+	 * wird immmer dann aufgerufen, wenn eine neue Msg der Imu ankommnt
+	 */
+	 
+	 /*
+	  * Diskussion:
+	  * - frequenz IMU schnell genug?
+	  * - spin() schneller als imu frequenz?
+	  * - in welche Richtung liefert IMU die Daten? evlt orientierug verrechnen?
+	  * 
+	  *     double dt = (current_time - last_time).toSec();
+			double delta_x = (vx * cos(th) - vy * sin(th)) * dt;
+			double delta_y = (vx * sin(th) + vy * cos(th)) * dt;
+			double delta_th = vth * dt;
+	  */
+	
 	ROS_INFO("received IMU message");
-	double newX, newY, newLinVeloX, newLinVeloY;
+	double dblDeltaT;
 	geometry_msgs::Quaternion newOrientation;
 	
 	//zeitdifferenz in sekunden
-	double deltaT = ros::Time::now().toSec() - lastOdom.header.stamp.toSec();
+	ros::Time timeCurrentTime = ros::Time::now();
+	dblDeltaT = timeCurrentTime.toSec() - timeLastTime.toSec();
 	
 	//neue geschwindigkeit aus beschleunigung
-	newLinVeloX=lastOdom.twist.twist.linear.x + imu->linear_acceleration.x * deltaT;
-	newLinVeloY=lastOdom.twist.twist.linear.y + imu->linear_acceleration.y * deltaT;
-	//newLinVeloZ = 0
+	dblLinVeloX = dblLinVeloX + imu->linear_acceleration.x * dblDeltaT;
+	dblLinVeloY = dblLinVeloY + imu->linear_acceleration.y * dblDeltaT;
+	//dblLinVeloZ = 0
 	
 	//neue position aus geschwindigkeit
-	newX = lastOdom.pose.pose.position.x + deltaT * newLinVeloX; //geschwindigkeit in richtiger einheit?!
-	newY = lastOdom.pose.pose.position.y + deltaT * newLinVeloY;
+	dblPosX = dblPosX + dblDeltaT * dblLinVeloX;
+	dblPosY = dblPosY + dblDeltaT * dblLinVeloY;
 	
-	//neue orientierung -> rotation um z achse, wir brauchen orientierung der z achse...(als winkel) dann mit winkel geschw verrechnen
-	geometry_msgs::Quaternion test = lastOdom.pose.pose.orientation;
-	//########## warum geht eine multiplikation nicht?!?!?!
-	//newOrientation = lastOdom.pose.pose.orientation * tf::createQuaternionMsgFromYaw(imu->angular_velocity.z * deltaT); //Neues Quaternion, repraesentiert neue rotierung seit letztem Zeitschritt, Quaternionen_gesamt = Quaternionen_rotation1 * Quaternion_rotation2 NICHT: " + "
-	newOrientation = tf::createQuaternionMsgFromYaw(imu->angular_velocity.z * deltaT); // eigentlich ...=test * tf::create....
+	//neue orientierung
+	dblAngZ = dblAngZ + imu->angular_velocity.z * dblDeltaT;
+	geometry_msgs::Quaternion quatNewOrientation = tf::createQuaternionMsgFromYaw(dblAngZ);
 	// eine drehung um x und y erfolgt nicht! 
 	
-	//Speichern der neuen Ergebnisse
-	saveOdometry(&lastOdom, ros::Time::now(), newX, newY, newOrientation);
-
-	//first, we'll publish the transform over tf
+	//Publishen der Transform ueber tf
     geometry_msgs::TransformStamped odom_trans; // odom_trans wird fuer transformation deklariert
     odom_trans.header.stamp = ros::Time::now();
     odom_trans.header.frame_id = "odom";
-    odom_trans.child_frame_id = "base_link"; //warum?
+    odom_trans.child_frame_id = "base_link";
 	
-	//braucht tf die absoluten oder relativen werte? falls relativ, korriegieren!
-	odom_trans.transform.translation.x = newX;
-	odom_trans.transform.translation.y = newY;
+	//Odometrie-Daten fuer tf
+	odom_trans.transform.translation.x = dblPosX;
+	odom_trans.transform.translation.y = dblPosY;
 	odom_trans.transform.translation.z = 0;
+	odom_trans.transform.rotation = quatNewOrientation; //neue orientierung
 	
-	odom_trans.transform.rotation = newOrientation; //neue orientierung
-	
-	
-    //send the transform
+    //Sende Transformation
     odom_broadcaster->sendTransform(odom_trans);
-
-
 	
-	//Publishen der Odometry Msg: odom=Header,Position, Orientierung, Twist(Geschwindigkeit linear und angular)
+	//Publishen der Odometry Msg: Header,Position, Orientierung, Twist(Geschwindigkeit linear und angular)
     nav_msgs::Odometry odom; //deklaration der zu sendenden msg
-    //-----start:msg mit inhalt fuellen-------------
+    
+    //Daten
     odom.header.stamp = ros::Time::now();
     odom.header.frame_id = "odom";
-    odom.child_frame_id = "base_link";
 	
-	//set the pose
-    odom.pose.pose.position.x = newX;
-    odom.pose.pose.position.y = newY;
+	//Setze Pose
+    odom.pose.pose.position.x = dblPosX;
+    odom.pose.pose.position.y = dblPosY;
     odom.pose.pose.position.z = 0;
 
-    odom.pose.pose.orientation = newOrientation;
+    odom.pose.pose.orientation = quatNewOrientation;
 
-    // angular velocity
+    // Winkelgeschwindigkeit
     odom.twist.twist.angular = imu->angular_velocity; //Winkelgeschwindigkeit wird direkt gemessen
     
-    //lineare geschwindigkeit
-    odom.twist.twist.linear.x=newLinVeloX;
-    odom.twist.twist.linear.y=newLinVeloY;
+    //Lineare Geschwindigkeit
+    odom.twist.twist.linear.x=dblLinVeloX;
+    odom.twist.twist.linear.y=dblLinVeloY;
     odom.twist.twist.linear.z=0;
-	//-----end:msg mit inhalt fuellen-------------
     
-    //publish the message
-    lastOdom = odom;
+    //Publish Msg
     odom_pub.publish(odom);
+    
+    //Zeit speichern
+    timeLastTime = timeCurrentTime;
 }
 
 
@@ -100,8 +113,9 @@ int main(int argc, char** argv){
 
   ros::NodeHandle n;
   
-  saveOdometry(&lastOdom, ros::Time::now(), 0, 0, tf::createQuaternionMsgFromYaw(0));
-  ROS_INFO("initalized Odometry");
+  ROS_INFO("Odometry initalized"); 
+
+  //Wurde durch initialisierung ersetzt - saveOdometry(&lastOdom, ros::Time::now(), 0, 0, tf::createQuaternionMsgFromYaw(0));
   
   odom_pub = n.advertise<nav_msgs::Odometry>("odom", 50); //Publisher odom_pub publisht den Messagetyp nav_msgs/Odometry auf Topic /odom mit einem Buffer von 50 nachrichten
   
@@ -109,5 +123,5 @@ int main(int argc, char** argv){
   
   ros::Subscriber imu_sub = n.subscribe("/sensor_msgs/Imu", 1, imuCallBack);  //Verknuepfe imuCallback
 
-   ros::spin();
+  ros::spin(); //checke, ob neue msg da ist
 }
