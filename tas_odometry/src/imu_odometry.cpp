@@ -9,18 +9,14 @@
 
 ros::Publisher odom_pub;
 tf::TransformBroadcaster* odom_broadcaster;
-//nav_msgs::Odometry lastOdom; //Speichern der letzten Odometry
 
 //Speichern letzte Odometrie
-double dblPosX = 0.0;
-double dblPosY = 0.0;
-
-double dblAngZ = 0.0;
-
-double dblLinVeloX = 0.0;
-double dblLinVeloY = 0.0;
-
-ros::Time timeLastTime = ros::Time::now();
+double dblPosX;
+double dblPosY;
+double dblAngZ;
+double dblLinVeloX;
+double dblLinVeloY;
+ros::Time timeLastTime;
 
 void imuCallBack(const sensor_msgs::Imu::ConstPtr& imu) //Erhaelt Msg vom Typ sensor_msgs/Imu von Topic /imu
 {
@@ -113,6 +109,13 @@ int main(int argc, char** argv){
 
   ros::NodeHandle n;
   
+  //Initialsiere Odometrie
+  dblPosX = 0.0;
+  dblPosY = 0.0;
+  dblAngZ = 0.0;
+  dblLinVeloX = 0.0;
+  dblLinVeloY = 0.0;
+  timeLastTime = ros::Time::now();
   ROS_INFO("Odometry initalized"); 
 
   //Wurde durch initialisierung ersetzt - saveOdometry(&lastOdom, ros::Time::now(), 0, 0, tf::createQuaternionMsgFromYaw(0));
