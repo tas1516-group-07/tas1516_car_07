@@ -7,7 +7,6 @@ project(tas_bringup)
 find_package(catkin REQUIRED COMPONENTS
   tas_odometry
   tas_simulator
-  frontier_exploration
 )
 
 ## System dependencies are found with CMake's conventions
