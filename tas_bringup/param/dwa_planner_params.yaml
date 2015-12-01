@@ -1,0 +1,63 @@
+DWAPlannerROS:
+  acc_lim_x: 2.5
+  acc_lim_y: 0
+  acc_lim_th: 0.1
+  max_trans_vel: 2.0
+  min_trans_vel: 0.5
+  max_vel_x: 2.0
+  min_vel_x: 0.2
+  max_vel_y: 0
+  min_vel_y: 0
+  max_rot_vel: 2.0
+  min_rot_vel: 0
+
+  #Goal Tolerance Parameters
+
+  yaw_goal_tolerance: 0.05
+
+  xy_goal_tolerance: 0.05
+
+  latch_xy_goal_tolerance: false
+
+  # Forward Simulation Parameters
+
+  sim_time: 1.7
+
+  sim_granularity: 0.025
+
+  vx_samples: 10
+
+  vy_samples: 10
+
+  vtheta_samples: 20
+
+  controller_frequency: 20.0
+
+  penalize_negative_x: false
+
+# Trajectory Scoring Parameters
+#
+# The cost function used to score each trajectory is in the following form:
+
+# cost =
+#  path_distance_bias * (distance to path from the endpoint of the trajectory in meters)
+#  + goal_distance_bias * (distance to local goal from the endpoint of the trajectory in meters)
+#  + occdist_scale * (maximum obstacle cost along the trajectory in obstacle cost (0-254))
+
+  path_distance_bias: 60.0
+
+  goal_distance_bias: 24.0
+
+  occdist_scale: 0.01
+
+  forward_point_distance: 0.325
+
+  stop_time_buffer: 0.2
+
+  scaling_speed: 0.25
+
+  max_scaling_factor: 0.2
+
+  oscillation_reset_dist: 0.05
+
+  prune_plan: true
