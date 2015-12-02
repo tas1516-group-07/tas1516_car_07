@@ -394,6 +394,9 @@ limitations under the License.
   <joint name="base_link_to_chasis" type="fixed">
     <parent link="base_link"/>
     <child link="chassis"/>
+    <origin xyz="	${wheelbase / 2}
+					0
+					0"/>
   </joint>
 
   <!-- Batteries -->
