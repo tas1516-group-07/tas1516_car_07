@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(move_base)
+project(ackermann_move_base)
 
 find_package(catkin REQUIRED
     COMPONENTS
@@ -17,7 +17,7 @@ add_definitions(${EIGEN_DEFINITIONS})
 
 # dynamic reconfigure
 generate_dynamic_reconfigure_options(
-    cfg/MoveBase.cfg
+    cfg/AckermannMoveBase.cfg
 )
 
 catkin_package(
@@ -32,27 +32,27 @@ include_directories(
     ${EIGEN_INCLUDE_DIRS}
 )
 
-# move_base
-add_library(move_base
-  src/move_base.cpp
+# ackermann_move_base
+add_library(ackermann_move_base
+  src/ackermann_move_base.cpp
 )
-target_link_libraries(move_base
+target_link_libraries(ackermann_move_base
     ${Boost_LIBRARIES}
     ${catkin_LIBRARIES}
     )
-add_dependencies(move_base move_base_gencfg)
-add_dependencies(move_base geometry_msgs_gencpp)
+add_dependencies(ackermann_move_base ackermann_move_base_gencfg)
+add_dependencies(ackermann_move_base geometry_msgs_gencpp)
 
-add_executable(move_base_node
-  src/move_base_node.cpp
+add_executable(ackermann_move_base_node
+  src/ackermann_move_base_node.cpp
 )
-target_link_libraries(move_base_node move_base)
-set_target_properties(move_base_node PROPERTIES OUTPUT_NAME move_base)
+target_link_libraries(ackermann_move_base_node ackermann_move_base)
+set_target_properties(ackermann_move_base_node PROPERTIES OUTPUT_NAME ackermann_move_base)
 
 install(
     TARGETS
-        move_base
-        move_base_node
+        ackermann_move_base
+        ackermann_move_base_node
     ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

@@ -57,13 +57,13 @@
 #include <std_srvs/Empty.h>
 
 #include <dynamic_reconfigure/server.h>
-#include "move_base/MoveBaseConfig.h"
+#include "ackermann_move_base/AckermannMoveBaseConfig.h"
 
-namespace move_base {
+namespace ackermann_move_base {
   //typedefs to help us out with the action server so that we don't hace to type so much
   typedef actionlib::SimpleActionServer<move_base_msgs::MoveBaseAction> MoveBaseActionServer;
 
-  enum MoveBaseState {
+  enum AckermannMoveBaseState {
     PLANNING,
     CONTROLLING,
     CLEARING
@@ -77,22 +77,22 @@ namespace move_base {
   };
 
   /**
-   * @class MoveBase
+   * @class AckermannMoveBase
    * @brief A class that uses the actionlib::ActionServer interface that moves the robot base to a goal location.
    */
-  class MoveBase {
+  class AckermannMoveBase {
     public:
       /**
        * @brief  Constructor for the actions
        * @param name The name of the action
        * @param tf A reference to a TransformListener
        */
-      MoveBase(tf::TransformListener& tf);
+      AckermannMoveBase(tf::TransformListener& tf);
 
       /**
        * @brief  Destructor - Cleans up
        */
-      virtual ~MoveBase();
+      virtual ~AckermannMoveBase();
 
       /**
        * @brief  Performs a control cycle
@@ -152,7 +152,7 @@ namespace move_base {
       void publishZeroVelocity();
 
       /**
-       * @brief  Reset the state of the move_base action and send a zero velocity command to the base
+       * @brief  Reset the state of the ackermann_move_base action and send a zero velocity command to the base
        */
       void resetState();
 
@@ -196,7 +196,7 @@ namespace move_base {
       bool shutdown_costmaps_, clearing_rotation_allowed_, recovery_behavior_enabled_;
       double oscillation_timeout_, oscillation_distance_;
 
-      MoveBaseState state_;
+      AckermannMoveBaseState state_;
       RecoveryTrigger recovery_trigger_;
 
       ros::Time last_valid_plan_, last_valid_control_, last_oscillation_reset_;
@@ -219,12 +219,12 @@ namespace move_base {
 
 
       boost::recursive_mutex configuration_mutex_;
-      dynamic_reconfigure::Server<move_base::MoveBaseConfig> *dsrv_;
+      dynamic_reconfigure::Server<ackermann_move_base::AckermannMoveBaseConfig> *dsrv_;
       
-      void reconfigureCB(move_base::MoveBaseConfig &config, uint32_t level);
+      void reconfigureCB(ackermann_move_base::AckermannMoveBaseConfig &config, uint32_t level);
 
-      move_base::MoveBaseConfig last_config_;
-      move_base::MoveBaseConfig default_config_;
+      ackermann_move_base::AckermannMoveBaseConfig last_config_;
+      ackermann_move_base::AckermannMoveBaseConfig default_config_;
       bool setup_, p_freq_change_, c_freq_change_;
       bool new_global_plan_;
   };

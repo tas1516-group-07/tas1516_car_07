@@ -35,7 +35,7 @@
 * Author: Eitan Marder-Eppstein
 *         Mike Phillips (put the planner in its own thread)
 *********************************************************************/
-#include <move_base/move_base.h>
+#include <ackermann_move_base/ackermann_move_base.h>
 #include <cmath>
 
 #include <boost/algorithm/string.hpp>
@@ -43,9 +43,9 @@
 
 #include <geometry_msgs/Twist.h>
 
-namespace move_base {
+namespace ackermann_move_base {
 
-  MoveBase::MoveBase(tf::TransformListener& tf) :
+  AckermannMoveBase::AckermannMoveBase(tf::TransformListener& tf) :
     tf_(tf),
     as_(NULL),
     planner_costmap_ros_(NULL), controller_costmap_ros_(NULL),
@@ -55,7 +55,7 @@ namespace move_base {
     planner_plan_(NULL), latest_plan_(NULL), controller_plan_(NULL),
     runPlanner_(false), setup_(false), p_freq_change_(false), c_freq_change_(false), new_global_plan_(false) {
 
-    as_ = new MoveBaseActionServer(ros::NodeHandle(), "move_base", boost::bind(&MoveBase::executeCb, this, _1), false);
+    as_ = new MoveBaseActionServer(ros::NodeHandle(), "move_base", boost::bind(&AckermannMoveBase::executeCb, this, _1), false);
 
     ros::NodeHandle private_nh("~");
     ros::NodeHandle nh;
@@ -82,7 +82,7 @@ namespace move_base {
     controller_plan_ = new std::vector<geometry_msgs::PoseStamped>();
 
     //set up the planner's thread
-    planner_thread_ = new boost::thread(boost::bind(&MoveBase::planThread, this));
+    planner_thread_ = new boost::thread(boost::bind(&AckermannMoveBase::planThread, this));
 
     //for comanding the base
     vel_pub_ = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
@@ -95,7 +95,7 @@ namespace move_base {
     //they won't get any useful information back about its status, but this is useful for tools
     //like nav_view and rviz
     ros::NodeHandle simple_nh("move_base_simple");
-    goal_sub_ = simple_nh.subscribe<geometry_msgs::PoseStamped>("goal", 1, boost::bind(&MoveBase::goalCB, this, _1));
+    goal_sub_ = simple_nh.subscribe<geometry_msgs::PoseStamped>("goal", 1, boost::bind(&AckermannMoveBase::goalCB, this, _1));
 
     //we'll assume the radius of the robot to be consistent with what's specified for the costmaps
     private_nh.param("local_costmap/inscribed_radius", inscribed_radius_, 0.325);
@@ -139,14 +139,14 @@ namespace move_base {
     controller_costmap_ros_->start();
 
     //advertise a service for getting a plan
-    make_plan_srv_ = private_nh.advertiseService("make_plan", &MoveBase::planService, this);
+    make_plan_srv_ = private_nh.advertiseService("make_plan", &AckermannMoveBase::planService, this);
 
     //advertise a service for clearing the costmaps
-    clear_costmaps_srv_ = private_nh.advertiseService("clear_costmaps", &MoveBase::clearCostmapsService, this);
+    clear_costmaps_srv_ = private_nh.advertiseService("clear_costmaps", &AckermannMoveBase::clearCostmapsService, this);
 
     //if we shutdown our costmaps when we're deactivated... we'll do that now
     if(shutdown_costmaps_){
-      ROS_DEBUG_NAMED("move_base","Stopping costmaps initially");
+      ROS_DEBUG_NAMED("ackermann_move_base","Stopping costmaps initially");
       planner_costmap_ros_->stop();
       controller_costmap_ros_->stop();
     }
@@ -165,12 +165,12 @@ namespace move_base {
     //we're all set up now so we can start the action server
     as_->start();
 
-    dsrv_ = new dynamic_reconfigure::Server<move_base::MoveBaseConfig>(ros::NodeHandle("~"));
-    dynamic_reconfigure::Server<move_base::MoveBaseConfig>::CallbackType cb = boost::bind(&MoveBase::reconfigureCB, this, _1, _2);
+    dsrv_ = new dynamic_reconfigure::Server<ackermann_move_base::AckermannMoveBaseConfig>(ros::NodeHandle("~"));
+    dynamic_reconfigure::Server<ackermann_move_base::AckermannMoveBaseConfig>::CallbackType cb = boost::bind(&AckermannMoveBase::reconfigureCB, this, _1, _2);
     dsrv_->setCallback(cb);
   }
 
-  void MoveBase::reconfigureCB(move_base::MoveBaseConfig &config, uint32_t level){
+  void AckermannMoveBase::reconfigureCB(ackermann_move_base::AckermannMoveBaseConfig &config, uint32_t level){
     boost::recursive_mutex::scoped_lock l(configuration_mutex_);
 
     //The first time we're called, we just want to make sure we have the
@@ -259,8 +259,8 @@ namespace move_base {
     last_config_ = config;
   }
 
-  void MoveBase::goalCB(const geometry_msgs::PoseStamped::ConstPtr& goal){
-    ROS_DEBUG_NAMED("move_base","In ROS goal callback, wrapping the PoseStamped in the action message and re-sending to the server.");
+  void AckermannMoveBase::goalCB(const geometry_msgs::PoseStamped::ConstPtr& goal){
+    ROS_DEBUG_NAMED("ackermann_move_base","In ROS goal callback, wrapping the PoseStamped in the action message and re-sending to the server.");
     move_base_msgs::MoveBaseActionGoal action_goal;
     action_goal.header.stamp = ros::Time::now();
     action_goal.goal.target_pose = *goal;
@@ -268,7 +268,7 @@ namespace move_base {
     action_goal_pub_.publish(action_goal);
   }
 
-  void MoveBase::clearCostmapWindows(double size_x, double size_y){
+  void AckermannMoveBase::clearCostmapWindows(double size_x, double size_y){
     tf::Stamped<tf::Pose> global_pose;
 
     //clear the planner's costmap
@@ -323,7 +323,7 @@ namespace move_base {
     controller_costmap_ros_->getCostmap()->setConvexPolygonCost(clear_poly, costmap_2d::FREE_SPACE);
   }
 
-  bool MoveBase::clearCostmapsService(std_srvs::Empty::Request &req, std_srvs::Empty::Response &resp){
+  bool AckermannMoveBase::clearCostmapsService(std_srvs::Empty::Request &req, std_srvs::Empty::Response &resp){
     //clear the costmaps
     planner_costmap_ros_->resetLayers();
     controller_costmap_ros_->resetLayers();
@@ -331,19 +331,19 @@ namespace move_base {
   }
 
 
-  bool MoveBase::planService(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response &resp){
+  bool AckermannMoveBase::planService(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response &resp){
     if(as_->isActive()){
-      ROS_ERROR("move_base must be in an inactive state to make a plan for an external user");
+      ROS_ERROR("ackermann_move_base must be in an inactive state to make a plan for an external user");
       return false;
     }
     //make sure we have a costmap for our planner
     if(planner_costmap_ros_ == NULL){
-      ROS_ERROR("move_base cannot make a plan for you because it doesn't have a costmap");
+      ROS_ERROR("ackermann_move_base cannot make a plan for you because it doesn't have a costmap");
       return false;
     }
     tf::Stamped<tf::Pose> global_pose;
     if(!planner_costmap_ros_->getRobotPose(global_pose)){
-      ROS_ERROR("move_base cannot make a plan for you because it could not get the start pose of the robot");
+      ROS_ERROR("ackermann_move_base cannot make a plan for you because it could not get the start pose of the robot");
       return false;
     }
     geometry_msgs::PoseStamped start;
@@ -359,7 +359,7 @@ namespace move_base {
     //first try to make a plan to the exact desired goal
     std::vector<geometry_msgs::PoseStamped> global_plan;
     if(!planner_->makePlan(start, req.goal, global_plan) || global_plan.empty()){
-      ROS_DEBUG_NAMED("move_base","Failed to find a plan to exact goal of (%.2f, %.2f), searching for a feasible goal within tolerance", 
+      ROS_DEBUG_NAMED("ackermann_move_base","Failed to find a plan to exact goal of (%.2f, %.2f), searching for a feasible goal within tolerance",
           req.goal.pose.position.x, req.goal.pose.position.y);
 
       //search outwards for a feasible goal within the specified tolerance
@@ -396,12 +396,12 @@ namespace move_base {
                     global_plan.push_back(req.goal);
 
                     found_legal = true;
-                    ROS_DEBUG_NAMED("move_base", "Found a plan to point (%.2f, %.2f)", p.pose.position.x, p.pose.position.y);
+                    ROS_DEBUG_NAMED("ackermann_move_base", "Found a plan to point (%.2f, %.2f)", p.pose.position.x, p.pose.position.y);
                     break;
                   }
                 }
                 else{
-                  ROS_DEBUG_NAMED("move_base","Failed to find a plan to point (%.2f, %.2f)", p.pose.position.x, p.pose.position.y);
+                  ROS_DEBUG_NAMED("ackermann_move_base","Failed to find a plan to point (%.2f, %.2f)", p.pose.position.x, p.pose.position.y);
                 }
               }
             }
@@ -419,7 +419,7 @@ namespace move_base {
     return true;
   }
 
-  MoveBase::~MoveBase(){
+  AckermannMoveBase::~AckermannMoveBase(){
     recovery_behaviors_.clear();
 
     delete dsrv_;
@@ -446,7 +446,7 @@ namespace move_base {
     tc_.reset();
   }
 
-  bool MoveBase::makePlan(const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan){
+  bool AckermannMoveBase::makePlan(const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan){
     boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(planner_costmap_ros_->getCostmap()->getMutex()));
 
     //make sure to set the plan to be empty initially
@@ -470,14 +470,14 @@ namespace move_base {
 
     //if the planner fails or returns a zero length plan, planning failed
     if(!planner_->makePlan(start, goal, plan) || plan.empty()){
-      ROS_DEBUG_NAMED("move_base","Failed to find a  plan to point (%.2f, %.2f)", goal.pose.position.x, goal.pose.position.y);
+      ROS_DEBUG_NAMED("ackermann_move_base","Failed to find a  plan to point (%.2f, %.2f)", goal.pose.position.x, goal.pose.position.y);
       return false;
     }
 
     return true;
   }
 
-  void MoveBase::publishZeroVelocity(){
+  void AckermannMoveBase::publishZeroVelocity(){
     geometry_msgs::Twist cmd_vel;
     cmd_vel.linear.x = 0.0;
     cmd_vel.linear.y = 0.0;
@@ -485,7 +485,7 @@ namespace move_base {
     vel_pub_.publish(cmd_vel);
   }
 
-  bool MoveBase::isQuaternionValid(const geometry_msgs::Quaternion& q){
+  bool AckermannMoveBase::isQuaternionValid(const geometry_msgs::Quaternion& q){
     //first we need to check if the quaternion has nan's or infs
     if(!std::isfinite(q.x) || !std::isfinite(q.y) || !std::isfinite(q.z) || !std::isfinite(q.w)){
       ROS_ERROR("Quaternion has nans or infs... discarding as a navigation goal");
@@ -515,7 +515,7 @@ namespace move_base {
     return true;
   }
 
-  geometry_msgs::PoseStamped MoveBase::goalToGlobalFrame(const geometry_msgs::PoseStamped& goal_pose_msg){
+  geometry_msgs::PoseStamped AckermannMoveBase::goalToGlobalFrame(const geometry_msgs::PoseStamped& goal_pose_msg){
     std::string global_frame = planner_costmap_ros_->getGlobalFrameID();
     tf::Stamped<tf::Pose> goal_pose, global_pose;
     poseStampedMsgToTF(goal_pose_msg, goal_pose);
@@ -538,14 +538,14 @@ namespace move_base {
     return global_pose_msg;
   }
 
-  void MoveBase::wakePlanner(const ros::TimerEvent& event)
+  void AckermannMoveBase::wakePlanner(const ros::TimerEvent& event)
   {
     // we have slept long enough for rate
     planner_cond_.notify_one();
   }
 
-  void MoveBase::planThread(){
-    ROS_DEBUG_NAMED("move_base_plan_thread","Starting planner thread...");
+  void AckermannMoveBase::planThread(){
+    ROS_DEBUG_NAMED("ackermann_move_base_plan_thread","Starting planner thread...");
     ros::NodeHandle n;
     ros::Timer timer;
     bool wait_for_wake = false;
@@ -554,7 +554,7 @@ namespace move_base {
       //check if we should run the planner (the mutex is locked)
       while(wait_for_wake || !runPlanner_){
         //if we should not be running the planner then suspend this thread
-        ROS_DEBUG_NAMED("move_base_plan_thread","Planner thread is suspending");
+        ROS_DEBUG_NAMED("ackermann_move_base_plan_thread","Planner thread is suspending");
         planner_cond_.wait(lock);
         wait_for_wake = false;
       }
@@ -563,14 +563,14 @@ namespace move_base {
       //time to plan! get a copy of the goal and unlock the mutex
       geometry_msgs::PoseStamped temp_goal = planner_goal_;
       lock.unlock();
-      ROS_DEBUG_NAMED("move_base_plan_thread","Planning...");
+      ROS_DEBUG_NAMED("ackermann_move_base_plan_thread","Planning...");
 
       //run planner
       planner_plan_->clear();
       bool gotPlan = n.ok() && makePlan(temp_goal, *planner_plan_);
 
       if(gotPlan){
-        ROS_DEBUG_NAMED("move_base_plan_thread","Got Plan with %zu points!", planner_plan_->size());
+        ROS_DEBUG_NAMED("ackermann_move_base_plan_thread","Got Plan with %zu points!", planner_plan_->size());
         //pointer swap the plans under mutex (the controller will pull from latest_plan_)
         std::vector<geometry_msgs::PoseStamped>* temp_plan = planner_plan_;
 
@@ -580,7 +580,7 @@ namespace move_base {
         last_valid_plan_ = ros::Time::now();
         new_global_plan_ = true;
 
-        ROS_DEBUG_NAMED("move_base_plan_thread","Generated a plan from the base_global_planner");
+        ROS_DEBUG_NAMED("ackermann_move_base_plan_thread","Generated a plan from the base_global_planner");
 
         //make sure we only start the controller if we still haven't reached the goal
         if(runPlanner_)
@@ -591,7 +591,7 @@ namespace move_base {
       }
       //if we didn't get a plan and we are in the planning state (the robot isn't moving)
       else if(state_==PLANNING){
-        ROS_DEBUG_NAMED("move_base_plan_thread","No Plan...");
+        ROS_DEBUG_NAMED("ackermann_move_base_plan_thread","No Plan...");
         ros::Time attempt_end = last_valid_plan_ + ros::Duration(planner_patience_);
 
         //check if we've tried to make a plan for over our time limit
@@ -613,20 +613,20 @@ namespace move_base {
         ros::Duration sleep_time = (start_time + ros::Duration(1.0/planner_frequency_)) - ros::Time::now();
         if (sleep_time > ros::Duration(0.0)){
           wait_for_wake = true;
-          timer = n.createTimer(sleep_time, &MoveBase::wakePlanner, this);
+          timer = n.createTimer(sleep_time, &AckermannMoveBase::wakePlanner, this);
         }
       }
     }
   }
 
-  void MoveBase::executeCb(const move_base_msgs::MoveBaseGoalConstPtr& move_base_goal)
+  void AckermannMoveBase::executeCb(const move_base_msgs::MoveBaseGoalConstPtr& ackermann_move_base_goal)
   {
-    if(!isQuaternionValid(move_base_goal->target_pose.pose.orientation)){
+    if(!isQuaternionValid(ackermann_move_base_goal->target_pose.pose.orientation)){
       as_->setAborted(move_base_msgs::MoveBaseResult(), "Aborting on goal because it was sent with an invalid quaternion");
       return;
     }
 
-    geometry_msgs::PoseStamped goal = goalToGlobalFrame(move_base_goal->target_pose);
+    geometry_msgs::PoseStamped goal = goalToGlobalFrame(ackermann_move_base_goal->target_pose);
 
     //we have a goal so start the planner
     boost::unique_lock<boost::mutex> lock(planner_mutex_);
@@ -640,7 +640,7 @@ namespace move_base {
 
     ros::Rate r(controller_frequency_);
     if(shutdown_costmaps_){
-      ROS_DEBUG_NAMED("move_base","Starting up costmaps that were shut down previously");
+      ROS_DEBUG_NAMED("ackermann_move_base","Starting up costmaps that were shut down previously");
       planner_costmap_ros_->start();
       controller_costmap_ros_->start();
     }
@@ -684,7 +684,7 @@ namespace move_base {
           lock.unlock();
 
           //publish the goal point to the visualizer
-          ROS_DEBUG_NAMED("move_base","move_base has received a goal of x: %.2f, y: %.2f", goal.pose.position.x, goal.pose.position.y);
+          ROS_DEBUG_NAMED("ackermann_move_base","ackermann_move_base has received a goal of x: %.2f, y: %.2f", goal.pose.position.x, goal.pose.position.y);
           current_goal_pub_.publish(goal);
 
           //make sure to reset our timeouts
@@ -697,7 +697,7 @@ namespace move_base {
           resetState();
 
           //notify the ActionServer that we've successfully preempted
-          ROS_DEBUG_NAMED("move_base","Move base preempting the current goal");
+          ROS_DEBUG_NAMED("ackermann_move_base","Move base preempting the current goal");
           as_->setPreempted();
 
           //we'll actually return from execute after preempting
@@ -721,7 +721,7 @@ namespace move_base {
         lock.unlock();
 
         //publish the goal point to the visualizer
-        ROS_DEBUG_NAMED("move_base","The global frame for move_base has changed, new frame: %s, new goal position x: %.2f, y: %.2f", goal.header.frame_id.c_str(), goal.pose.position.x, goal.pose.position.y);
+        ROS_DEBUG_NAMED("ackermann_move_base","The global frame for ackermann_move_base has changed, new frame: %s, new goal position x: %.2f, y: %.2f", goal.header.frame_id.c_str(), goal.pose.position.x, goal.pose.position.y);
         current_goal_pub_.publish(goal);
 
         //make sure to reset our timeouts
@@ -743,7 +743,7 @@ namespace move_base {
       //check if execution of the goal has completed in some way
 
       ros::WallDuration t_diff = ros::WallTime::now() - start;
-      ROS_DEBUG_NAMED("move_base","Full control cycle time: %.9f\n", t_diff.toSec());
+      ROS_DEBUG_NAMED("ackermann_move_base","Full control cycle time: %.9f\n", t_diff.toSec());
 
       r.sleep();
       //make sure to sleep for the remainder of our cycle time
@@ -762,12 +762,12 @@ namespace move_base {
     return;
   }
 
-  double MoveBase::distance(const geometry_msgs::PoseStamped& p1, const geometry_msgs::PoseStamped& p2)
+  double AckermannMoveBase::distance(const geometry_msgs::PoseStamped& p1, const geometry_msgs::PoseStamped& p2)
   {
     return hypot(p1.pose.position.x - p2.pose.position.x, p1.pose.position.y - p2.pose.position.y);
   }
 
-  bool MoveBase::executeCycle(geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& global_plan){
+  bool AckermannMoveBase::executeCycle(geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& global_plan){
     boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
     //we need to be able to publish velocity commands
     geometry_msgs::Twist cmd_vel;
@@ -806,7 +806,7 @@ namespace move_base {
       //make sure to set the new plan flag to false
       new_global_plan_ = false;
 
-      ROS_DEBUG_NAMED("move_base","Got a new plan...swap pointers");
+      ROS_DEBUG_NAMED("ackermann_move_base","Got a new plan...swap pointers");
 
       //do a pointer swap under mutex
       std::vector<geometry_msgs::PoseStamped>* temp_plan = controller_plan_;
@@ -815,7 +815,7 @@ namespace move_base {
       controller_plan_ = latest_plan_;
       latest_plan_ = temp_plan;
       lock.unlock();
-      ROS_DEBUG_NAMED("move_base","pointers swapped!");
+      ROS_DEBUG_NAMED("ackermann_move_base","pointers swapped!");
 
       if(!tc_->setPlan(*controller_plan_)){
         //ABORT and SHUTDOWN COSTMAPS
@@ -836,7 +836,7 @@ namespace move_base {
         recovery_index_ = 0;
     }
 
-    //the move_base state machine, handles the control logic for navigation
+    //the ackermann_move_base state machine, handles the control logic for navigation
     switch(state_){
       //if we are in a planning state, then we'll attempt to make a plan
       case PLANNING:
@@ -845,16 +845,16 @@ namespace move_base {
           runPlanner_ = true;
           planner_cond_.notify_one();
         }
-        ROS_DEBUG_NAMED("move_base","Waiting for plan, in the planning state.");
+        ROS_DEBUG_NAMED("ackermann_move_base","Waiting for plan, in the planning state.");
         break;
 
       //if we're controlling, we'll attempt to find valid velocity commands
       case CONTROLLING:
-        ROS_DEBUG_NAMED("move_base","In controlling state.");
+        ROS_DEBUG_NAMED("ackermann_move_base","In controlling state.");
 
         //check to see if we've reached our goal
         if(tc_->isGoalReached()){
-          ROS_DEBUG_NAMED("move_base","Goal reached!");
+          ROS_DEBUG_NAMED("ackermann_move_base","Goal reached!");
           resetState();
 
           //disable the planner thread
@@ -879,7 +879,7 @@ namespace move_base {
          boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(controller_costmap_ros_->getCostmap()->getMutex()));
         
         if(tc_->computeVelocityCommands(cmd_vel)){
-          ROS_DEBUG_NAMED( "move_base", "Got a valid command from the local planner: %.3lf, %.3lf, %.3lf",
+          ROS_DEBUG_NAMED( "ackermann_move_base", "Got a valid command from the local planner: %.3lf, %.3lf, %.3lf",
                            cmd_vel.linear.x, cmd_vel.linear.y, cmd_vel.angular.z );
           last_valid_control_ = ros::Time::now();
           //make sure that we send the velocity command to the base
@@ -888,7 +888,7 @@ namespace move_base {
             recovery_index_ = 0;
         }
         else {
-          ROS_DEBUG_NAMED("move_base", "The local planner could not find a valid plan.");
+          ROS_DEBUG_NAMED("ackermann_move_base", "The local planner could not find a valid plan.");
           ros::Time attempt_end = last_valid_control_ + ros::Duration(controller_patience_);
 
           //check if we've tried to find a valid control for longer than our time limit
@@ -917,30 +917,30 @@ namespace move_base {
 
       //we'll try to clear out space with any user-provided recovery behaviors
       case CLEARING:
-        ROS_DEBUG_NAMED("move_base","In clearing/recovery state");
+        ROS_DEBUG_NAMED("ackermann_move_base","In clearing/recovery state");
         //we'll invoke whatever recovery behavior we're currently on if they're enabled
         if(recovery_behavior_enabled_ && recovery_index_ < recovery_behaviors_.size()){
-          ROS_DEBUG_NAMED("move_base_recovery","Executing behavior %u of %zu", recovery_index_, recovery_behaviors_.size());
+          ROS_DEBUG_NAMED("ackermann_move_base_recovery","Executing behavior %u of %zu", recovery_index_, recovery_behaviors_.size());
           recovery_behaviors_[recovery_index_]->runBehavior();
 
           //we at least want to give the robot some time to stop oscillating after executing the behavior
           last_oscillation_reset_ = ros::Time::now();
 
           //we'll check if the recovery behavior actually worked
-          ROS_DEBUG_NAMED("move_base_recovery","Going back to planning state");
+          ROS_DEBUG_NAMED("ackermann_move_base_recovery","Going back to planning state");
           state_ = PLANNING;
 
           //update the index of the next recovery behavior that we'll try
           recovery_index_++;
         }
         else{
-          ROS_DEBUG_NAMED("move_base_recovery","All recovery behaviors have failed, locking the planner and disabling it.");
+          ROS_DEBUG_NAMED("ackermann_move_base_recovery","All recovery behaviors have failed, locking the planner and disabling it.");
           //disable the planner thread
           boost::unique_lock<boost::mutex> lock(planner_mutex_);
           runPlanner_ = false;
           lock.unlock();
 
-          ROS_DEBUG_NAMED("move_base_recovery","Something should abort after this.");
+          ROS_DEBUG_NAMED("ackermann_move_base_recovery","Something should abort after this.");
 
           if(recovery_trigger_ == CONTROLLING_R){
             ROS_ERROR("Aborting because a valid control could not be found. Even after executing all recovery behaviors");
@@ -965,7 +965,7 @@ namespace move_base {
         boost::unique_lock<boost::mutex> lock(planner_mutex_);
         runPlanner_ = false;
         lock.unlock();
-        as_->setAborted(move_base_msgs::MoveBaseResult(), "Reached a case that should not be hit in move_base. This is a bug, please report it.");
+        as_->setAborted(move_base_msgs::MoveBaseResult(), "Reached a case that should not be hit in ackermann_move_base. This is a bug, please report it.");
         return true;
     }
 
@@ -973,8 +973,8 @@ namespace move_base {
     return false;
   }
 
-  bool MoveBase::loadRecoveryBehaviors(ros::NodeHandle node){
-    XmlRpc::XmlRpcValue behavior_list;
+  bool AckermannMoveBase::loadRecoveryBehaviors(ros::NodeHandle node){
+	  XmlRpc::XmlRpcValue behavior_list;
     if(node.getParam("recovery_behaviors", behavior_list)){
       if(behavior_list.getType() == XmlRpc::XmlRpcValue::TypeArray){
         for(int i = 0; i < behavior_list.size(); ++i){
@@ -1058,7 +1058,7 @@ namespace move_base {
   }
 
   //we'll load our default recovery behaviors here
-  void MoveBase::loadDefaultRecoveryBehaviors(){
+  void AckermannMoveBase::loadDefaultRecoveryBehaviors(){
     recovery_behaviors_.clear();
     try{
       //we need to set some parameters based on what's been passed in to us to maintain backwards compatibility
@@ -1094,7 +1094,7 @@ namespace move_base {
     return;
   }
 
-  void MoveBase::resetState(){
+  void AckermannMoveBase::resetState(){
     // Disable the planner thread
     boost::unique_lock<boost::mutex> lock(planner_mutex_);
     runPlanner_ = false;
@@ -1108,7 +1108,7 @@ namespace move_base {
 
     //if we shutdown our costmaps when we're deactivated... we'll do that now
     if(shutdown_costmaps_){
-      ROS_DEBUG_NAMED("move_base","Stopping costmaps");
+      ROS_DEBUG_NAMED("ackermann_move_base","Stopping costmaps");
       planner_costmap_ros_->stop();
       controller_costmap_ros_->stop();
     }
